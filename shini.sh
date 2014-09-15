@@ -6,7 +6,7 @@
 
 shini_function_exists()
 {
-	type -t "$1" | grep -q "^function$"
+	type "$1" > /dev/null
 	return $?
 }
 
