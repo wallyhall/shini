@@ -151,11 +151,11 @@ There are no INI format standards - so yes it does and no it doesn't?
 `shini` assumes:
 
  * Every declaration is on a new line
- * _Sections_ are contained in square brackets, and include a-z, A-Z, 0-9, - and _ (no spaces by default) - e.g. `[section]`
- * _Keys_ are followed by an assignment (equal) sign, and include a-z, A-Z, 0-9, - and _ (again, no spaces by default) - e.g. `key=`
- * _Values_ follow keys, on the same line.  Anything is valid, except double quotes and semi-colons.  Hexadecimal values (i.e. `0x123`) are parsed and converted to decimal for you.
- * _Comments_ are lines starting with a semi-colon (`;`), such lines are ignored.
- * _Whitespace_ is ignored everywhere - except in between non-whitespace characters in values.  Use double quotes (`"`) to be explicit (e.g. `key=" leading/trailing WS "`)
+ * __Sections__ are contained in square brackets, and include `a-z`, `A-Z`, `0-9`, `-` and `_` (no spaces by default) - e.g. `[section]`
+ * __Keys__ are followed by an assignment (equal) sign, and include `a-z`, `A-Z`, `0-9`, `-` and `_` (again, no spaces by default) - e.g. `key=`
+ * __Values__ follow keys, on the same line.  Anything is valid, except double quotes and semi-colons.  Hexadecimal values (i.e. `0x123`) are parsed and converted to decimal for you.
+ * __Comments__ are lines starting with a semi-colon (`;`), such lines are ignored.
+ * __Whitespace__ is ignored everywhere - except in between non-whitespace characters in values.  Use double quotes (`"`) to be explicit (e.g. `key=" leading/trailing WS "`)
 
 Due to portability constraints - some of the useful regex power isn't available to `shini`.
 
