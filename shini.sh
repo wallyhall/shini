@@ -40,7 +40,7 @@ shini_parse()
 		if shini_function_exists "__shini_file_unreadable"; then
 			__shini_file_unreadable "$INI_FILE"
 		else
-			printf 'shini: Unable to read INI file:\n  `%s`' "$INI_FILE" §>&2
+			printf 'shini: Unable to read INI file:\n  `%s`' "$INI_FILE" 1>&2
 			exit 253
 		fi
 	fi
