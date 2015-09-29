@@ -1,1 +1,5 @@
+os:
+  - linux
+  - osx
+
 script: sh test.sh
