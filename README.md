@@ -1,4 +1,4 @@
-shini
+shini [![Build Status](https://travis-ci.org/wallyhall/shini.svg?branch=master)](https://travis-ci.org/wallyhall/shini)
 =====
 
 A small, minimialist, portable `/bin/sh` routine for reading and writing INI files.
