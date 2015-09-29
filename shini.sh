@@ -14,9 +14,9 @@ shini_function_exists()
 shini_parse()
 {
 
-	RX_KEY='[a-zA-Z0-9\-_]'
+	RX_KEY='[a-zA-Z0-9_\-]'
 	RX_VALUE="[^;\"]"
-	RX_SECTION='[a-zA-Z0-9\-_]'
+	RX_SECTION='[a-zA-Z0-9_\-]'
 	RX_WS='[ 	]'
 	RX_QUOTE='"'
 	RX_HEX='[0-9A-F]'
