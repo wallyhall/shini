@@ -81,5 +81,39 @@ shini_parse "tests/nonexistent.ini"
 shini_parse "tests/test1.ini"
 shini_parse "tests/test2.ini"
 
+## Write tests
+
+TEMP="$(mktemp -t shini_test)"
+echo -n "
+[SECTION1]
+abc=123
+[SECTION2]
+def=456 ; comment
+ccc=ccc" > "$TEMP"
+
+shini_write "$TEMP" "SECTION1" "qqq" "aaa"
+shini_write "$TEMP" "SECTION1" "qqq" "abc"
+shini_write "$TEMP" "SECTION1" "qqq" "ddd"
+shini_write "$TEMP" "SECTION2" "rrr" "sss"
+shini_write "$TEMP" "SECTION1" "abc" "bbb"
+shini_write "$TEMP" "SECTION3" "xxx" "yyy"
+
+if ! grep -q "abc=bbb" "$TEMP"; then
+    echo "Writing failed (abc=bbb)"
+    FAIL=1
+fi
+
+if ! grep -q "qqq=ddd" "$TEMP"; then
+    echo "Writing failed (qqq=ddd)"
+    FAIL=1
+fi
+
+if grep -q "abc=123" "$TEMP"; then
+    echo "Updating failed (abc=123 still remains)"
+    FAIL=1
+fi
+
+rm -f "$TEMP"
+
 exit $FAIL
 
