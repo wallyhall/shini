@@ -83,7 +83,7 @@ shini_parse "tests/test2.ini"
 
 ## Write tests
 
-TEMP="$(mktemp -t shini_test)"
+TEMP="$(mktemp -t shini_test_XXXXXX)"
 echo -n "
 [SECTION1]
 abc=123
