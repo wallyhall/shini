@@ -1,7 +1,16 @@
 shini [![Build Status](https://travis-ci.org/wallyhall/shini.svg?branch=master)](https://travis-ci.org/wallyhall/shini)
 =====
 
-A small, minimialist, portable `/bin/sh` routine for reading (and in the upcoming v2.0 - writing) INI files.
+A small, minimialist, portable `/bin/sh` routine for reading (and now very alpha-quality writing) of INI files.
+
+## IMPORTANT NOTE ABOUT RELEASES
+Release 0.9 is mostly stable; the only major known bug is the last line of INI files is skipped from parsing if there's no empty new line at the end of the file.  (Easy work-around...)
+
+The latest code has alpha support for writing - you can perform writes like so:
+
+```
+shini_write "filename.ini" "SECTION" "key" "New Value"
+```
 
 ## About
 
@@ -11,7 +20,7 @@ As above.  It's a small set of functions written for inclusion in shell scripts,
 ### Why do I need it?
 You probably don't.  But if you have or ever do find yourself writing a shell script which:
  * Needs system or user specific settings
- * Needs to read an existing INI file
+ * Needs to read (or write to) an existing INI file
 
 ... then you might find `shini` saves you a lot of time, and makes things safer.
 
