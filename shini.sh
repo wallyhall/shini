@@ -62,7 +62,7 @@ shini_parse()
 		if shini_function_exists "__shini_file_unreadable${POSTFIX}"; then
 			"__shini_file_unreadable${POSTFIX}" "$INI_FILE" "$EXTRA1" "$EXTRA2" "$EXTRA3"
 		else
-			printf 'shini: Unable to read INI file:\n  `%s`' "$INI_FILE" 1>&2
+			printf 'shini: Unable to read INI file:\n  `%s`\n' "$INI_FILE" 1>&2
 			exit 253
 		fi
 	fi
