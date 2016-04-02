@@ -22,20 +22,24 @@ shini_parse()
 	RX_WS='[ 	]'
 	RX_QUOTE='"'
 	RX_HEX='[0-9A-F]'
+	POSTFIX=''
+	EXTRA1=''
+	EXTRA2=''
+	EXTRA3=''
 	
-	if [ ! -z "$2" ]; then
+	if [ $# -ge 2 ] && [ ! -z "$2" ]; then
 	    POSTFIX="_$2"
 	fi
 	
-	if [ ! -z "$3" ]; then
+	if [ $# -ge 3 ] && ! [ -z "$3" ]; then
 	    EXTRA1="$3"
 	fi
 	
-	if [ ! -z "$4" ]; then
+	if [ $# -ge 4 ] && [ ! -z "$4" ]; then
 	    EXTRA2="$4"
 	fi
 	
-	if [ ! -z "$5" ]; then
+	if [ $# -ge 5 ] && [ ! -z "$5" ]; then
 	    EXTRA3="$5"
 	fi
 	
