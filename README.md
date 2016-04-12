@@ -3,15 +3,6 @@ shini [![Build Status](https://travis-ci.org/wallyhall/shini.svg?branch=master)]
 
 A small, minimialist, portable `/bin/sh` routine for reading (and now very alpha-quality writing) of INI files.
 
-## IMPORTANT NOTE ABOUT RELEASES
-Release 0.9 is mostly stable; the only major known bug is the last line of INI files is skipped from parsing if there's no empty new line at the end of the file.  (Easy work-around...)
-
-The latest code has alpha support for writing - you can perform writes like so:
-
-```
-shini_write "filename.ini" "SECTION" "key" "New Value"
-```
-
 ## About
 
 ### What is `shini`?
@@ -140,6 +131,16 @@ shini_parse "settings.ini"
 ```
 
 Bingo.  A full (and simple example) can be found in `example.sh`.
+
+### ...and what about writing data too?
+
+Easy!
+
+```
+shini_write "filename.ini" "SECTION_NAME" "key_name" "Some value here!"
+```
+
+This will update existing values and append new ones.  As always - give really careful thought to your INI file filesystem permissions before allowing users to arbitarily change the content!
 
 ### Can I override the error handling?
 
