@@ -2,4 +2,16 @@ os:
   - linux
   - osx
 
-script: sh test.sh
+sudo: required
+
+addons:
+  apt:
+    packages:
+      - ksh
+      - bash
+      - zsh
+
+script:
+  - bash test.sh
+  - ksh test.sh
+  - zsh test.sh
