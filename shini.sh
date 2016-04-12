@@ -170,7 +170,7 @@ shini_write()
                     printf "\n%s=%s" "$WRITE_KEY" "$WRITE_VALUE" >> "$INI_FILE_TEMP"
                 fi
                 VALUE_WRITTEN=1
-                continue
+                return
             fi
         fi
         
