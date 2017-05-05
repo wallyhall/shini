@@ -6,8 +6,8 @@
 
 shini_function_exists()
 {
-	type "$1" > /dev/null 2>&1
-	return $?
+    type "$1" > /dev/null 2>&1
+    return $?
 }
 
 # @param inifile Filename of INI file to parse
@@ -15,113 +15,112 @@ shini_function_exists()
 # @param extra Extra argument for callbacks (optional)
 shini_parse()
 {
+    RX_KEY='[a-zA-Z0-9_\-]'
+    RX_VALUE="[^;\"]"
+    RX_SECTION='[a-zA-Z0-9_\-]'
+    RX_WS='[ 	]'
+    RX_QUOTE='"'
+    RX_HEX='[0-9A-F]'
+    POSTFIX=''
+    EXTRA1=''
+    EXTRA2=''
+    EXTRA3=''
+	
+    if [ $# -ge 2 ] && [ ! -z "$2" ]; then
+        POSTFIX="_$2"
+    fi
+	
+    if [ $# -ge 3 ] && ! [ -z "$3" ]; then
+        EXTRA1="$3"
+    fi
+	
+    if [ $# -ge 4 ] && [ ! -z "$4" ]; then
+        EXTRA2="$4"
+    fi
+	
+    if [ $# -ge 5 ] && [ ! -z "$5" ]; then
+        EXTRA3="$5"
+    fi
+	
+    if ! shini_function_exists "__shini_parsed${POSTFIX}"; then
+        printf 'shini: __shini_parsed%s function not declared.\n' "${POSTFIX}" 1>&2
+        exit 255
+    fi
 
-	RX_KEY='[a-zA-Z0-9_\-]'
-	RX_VALUE="[^;\"]"
-	RX_SECTION='[a-zA-Z0-9_\-]'
-	RX_WS='[ 	]'
-	RX_QUOTE='"'
-	RX_HEX='[0-9A-F]'
-	POSTFIX=''
-	EXTRA1=''
-	EXTRA2=''
-	EXTRA3=''
-	
-	if [ $# -ge 2 ] && [ ! -z "$2" ]; then
-	    POSTFIX="_$2"
-	fi
-	
-	if [ $# -ge 3 ] && ! [ -z "$3" ]; then
-	    EXTRA1="$3"
-	fi
-	
-	if [ $# -ge 4 ] && [ ! -z "$4" ]; then
-	    EXTRA2="$4"
-	fi
-	
-	if [ $# -ge 5 ] && [ ! -z "$5" ]; then
-	    EXTRA3="$5"
-	fi
-	
-	if ! shini_function_exists "__shini_parsed${POSTFIX}"; then
-		printf 'shini: __shini_parsed%s function not declared.\n' "${POSTFIX}" 1>&2
-		exit 255
-	fi
+    if [ $# -lt 1 ]; then
+        if shini_function_exists "__shini_no_file_passed{$POSTFIX}"; then
+            "__shini_no_file_passed${POSTFIX}" "$EXTRA1" "$EXTRA2" "$EXTRA3"
+        else
+            printf 'shini: Argument 1 needs to specify the INI file to parse.\n' 1>&2
+            exit 254
+        fi
+    fi
+    INI_FILE="$1"
 
-	if [ $# -lt 1 ]; then
-		if shini_function_exists "__shini_no_file_passed{$POSTFIX}"; then
-			"__shini_no_file_passed${POSTFIX}" "$EXTRA1" "$EXTRA2" "$EXTRA3"
-		else
-			printf 'shini: Argument 1 needs to specify the INI file to parse.\n' 1>&2
-			exit 254
-		fi
-	fi
-	INI_FILE="$1"
+    if [ ! -r "$INI_FILE" ]; then
+        if shini_function_exists "__shini_file_unreadable${POSTFIX}"; then
+            "__shini_file_unreadable${POSTFIX}" "$INI_FILE" "$EXTRA1" "$EXTRA2" "$EXTRA3"
+        else
+            printf 'shini: Unable to read INI file:\n  `%s`\n' "$INI_FILE" 1>&2
+            exit 253
+        fi
+    fi
 
-	if [ ! -r "$INI_FILE" ]; then
-		if shini_function_exists "__shini_file_unreadable${POSTFIX}"; then
-			"__shini_file_unreadable${POSTFIX}" "$INI_FILE" "$EXTRA1" "$EXTRA2" "$EXTRA3"
-		else
-			printf 'shini: Unable to read INI file:\n  `%s`\n' "$INI_FILE" 1>&2
-			exit 253
-		fi
-	fi
+    # Iterate INI file line by line
+    LINE_NUM=0
+    SECTION=''
+    while read LINE || [ -n "$LINE" ]; do  # -n $LINE catches final line if not empty
+        # Check for new sections
+        if printf '%s' "$LINE" | \
+          grep -qe "^${RX_WS}*\[${RX_SECTION}${RX_SECTION}*\]${RX_WS}*$"; then
+            SECTION="$(printf '%s' "$LINE" | \
+                sed "s/^${RX_WS}*\[\(${RX_SECTION}${RX_SECTION}*\)\]${RX_WS}*$/\1/")"
 
-	# Iterate INI file line by line
-	LINE_NUM=0
-	SECTION=''
-	while read LINE || [ -n "$LINE" ]; do  # -n $LINE catches final line if not empty
-		# Check for new sections
-		if printf '%s' "$LINE" | \
-		  grep -qe "^${RX_WS}*\[${RX_SECTION}${RX_SECTION}*\]${RX_WS}*$"; then
-			SECTION="$(printf '%s' "$LINE" | \
-				sed "s/^${RX_WS}*\[\(${RX_SECTION}${RX_SECTION}*\)\]${RX_WS}*$/\1/")"
-				
             if shini_function_exists "__shini_parsed_section${POSTFIX}"; then
-				"__shini_parsed_section${POSTFIX}" "$SECTION" "$EXTRA1" "$EXTRA2" "$EXTRA3"
-			fi
+                "__shini_parsed_section${POSTFIX}" "$SECTION" "$EXTRA1" "$EXTRA2" "$EXTRA3"
+            fi
 			
-			continue
-		fi
+            continue
+        fi
 		
-		# Check for new values
-		if printf '%s' "$LINE" | \
-		  grep -qe "^${RX_WS}*${RX_KEY}${RX_KEY}*${RX_WS}*="; then
-			KEY="$(printf '%s' "$LINE" | \
-				sed "s/^${RX_WS}*\(${RX_KEY}${RX_KEY}*\)${RX_WS}*=.*$/\1/")"
-			VALUE="$(printf '%s' "$LINE" | \
-				sed "s/^${RX_WS}*${RX_KEY}${RX_KEY}*${RX_WS}*=${RX_WS}*${RX_QUOTE}\{0,1\}\(${RX_VALUE}*\)${RX_QUOTE}\{0,1\}\(${RX_WS}*\;.*\)*$/\1/")"
+        # Check for new values
+        if printf '%s' "$LINE" | \
+          grep -qe "^${RX_WS}*${RX_KEY}${RX_KEY}*${RX_WS}*="; then
+            KEY="$(printf '%s' "$LINE" | \
+                sed "s/^${RX_WS}*\(${RX_KEY}${RX_KEY}*\)${RX_WS}*=.*$/\1/")"
+            VALUE="$(printf '%s' "$LINE" | \
+                sed "s/^${RX_WS}*${RX_KEY}${RX_KEY}*${RX_WS}*=${RX_WS}*${RX_QUOTE}\{0,1\}\(${RX_VALUE}*\)${RX_QUOTE}\{0,1\}\(${RX_WS}*\;.*\)*$/\1/")"
 			
-			if printf '%s' "$VALUE" | grep -qe "^0x${RX_HEX}${RX_HEX}*$"; then
-				VALUE=$(printf '%d' "$VALUE")
-			fi
+            if printf '%s' "$VALUE" | grep -qe "^0x${RX_HEX}${RX_HEX}*$"; then
+                VALUE=$(printf '%d' "$VALUE")
+            fi
 			
-			"__shini_parsed${POSTFIX}" "$SECTION" "$KEY" "$VALUE" "$EXTRA1" "$EXTRA2" "$EXTRA3"
+            "__shini_parsed${POSTFIX}" "$SECTION" "$KEY" "$VALUE" "$EXTRA1" "$EXTRA2" "$EXTRA3"
 						
-			if shini_function_exists "__shini_parsed_comment${POSTFIX}"; then
-			    if printf '%s' "$LINE" | grep -q ";"; then
-        			COMMENT="$(printf '%s' "$LINE" | \
-    	    			sed "s/^.*\;\(.*\)$/\1/")"
-        			 "__shini_parsed_comment${POSTFIX}" "$COMMENT" "$EXTRA1" "$EXTRA2" "$EXTRA3"
-    	        fi
+            if shini_function_exists "__shini_parsed_comment${POSTFIX}"; then
+                if printf '%s' "$LINE" | grep -q ";"; then
+                    COMMENT="$(printf '%s' "$LINE" | \
+                        sed "s/^.*\;\(.*\)$/\1/")"
+                     "__shini_parsed_comment${POSTFIX}" "$COMMENT" "$EXTRA1" "$EXTRA2" "$EXTRA3"
+                fi
             fi
             
-			continue
-		fi
+            continue
+        fi
 		
-		# Announce parse errors
-		if [ "$LINE" != '' ] &&
-		  ! printf '%s' "$LINE" | grep -qe "^${RX_WS}*;.*$" &&
-		  ! printf '%s' "$LINE" | grep -qe "^${RX_WS}*$"; then
-			if shini_function_exists "__shini_parse_error${POSTFIX}"; then
-				"__shini_parse_error${POSTFIX}" $LINE_NUM "$LINE" "$EXTRA1" "$EXTRA2" "$EXTRA3"
-			else
-				printf 'shini: Unable to parse line %d:\n  `%s`\n' $LINE_NUM "$LINE"
-			fi
-		fi
+        # Announce parse errors
+        if [ "$LINE" != '' ] &&
+          ! printf '%s' "$LINE" | grep -qe "^${RX_WS}*;.*$" &&
+          ! printf '%s' "$LINE" | grep -qe "^${RX_WS}*$"; then
+            if shini_function_exists "__shini_parse_error${POSTFIX}"; then
+                "__shini_parse_error${POSTFIX}" $LINE_NUM "$LINE" "$EXTRA1" "$EXTRA2" "$EXTRA3"
+            else
+                printf 'shini: Unable to parse line %d:\n  `%s`\n' $LINE_NUM "$LINE"
+            fi
+        fi
 		
-		LINE_NUM=$((LINE_NUM+1))
-	done < "$INI_FILE"
+        LINE_NUM=$((LINE_NUM+1))
+    done < "$INI_FILE"
 
 }
 
