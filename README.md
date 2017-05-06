@@ -1,12 +1,42 @@
 shini [![Build Status](https://travis-ci.org/wallyhall/shini.svg?branch=master)](https://travis-ci.org/wallyhall/shini)
 =====
 
-A small, minimialist, portable `/bin/sh` routine for reading (and now very alpha-quality writing) of INI files.
+A small, minimialist, <s>portable</s> <em>compatible</em><sup>1</sup> `/bin/sh` routine for reading (and now very alpha-quality writing) of INI files.
+
+<em><sup>1</sup> This script previously attempted to be "portable", that is to say - written in a manner that it would reliably have a good chance of running anywhere with no specific implementation coded inside.  In order to gain usable performance on INI files bigger than "very small", it has since been modified to include shell specific implementation for recent versions of `zsh`, `ksh` and `bash` - considerably increasing performance at the cost of code complexity.  Therefore, I am calling it 'compatible' herein.</em>
 
 ## About
 
 ### What is `shini`?
 As above.  It's a small set of functions written for inclusion in shell scripts, released under the MIT license.
+
+### Is it slow?
+Shell scripting was never designed with speed for this kind of processing in mind.  That said, on recent versions of `bash` (version 3 or newer) and `zsh` (and to a lesser extent `ksh` version 93 and newer) the performance is quite acceptable.
+
+Other/older shells will fall back to expensive calls to `grep` and `sed`, an will perform significantly slower (potentially hundreds of times slower).
+
+On an 2012 i7 MacBook, a 1900 line INI file will fully parse within 0.6s - and a single section therein in under 0.24s (`zsh`):
+
+    $ wc -l tests/php.ini 
+    1917 tests/php.ini
+
+    $ time zsh ./test_perf.sh > /dev/null
+    real    0m0.595s
+
+    $ time bash ./test_perf.sh > /dev/null
+    real    0m0.838s
+
+    $ time ksh ./test_perf.sh > /dev/null
+    real    0m2.901s
+
+    $ time zsh ./test_perf.sh opcache > /dev/null
+    real    0m0.237s
+
+    $ time bash ./test_perf.sh opcache > /dev/null
+    real    0m0.313s
+
+    $ time ksh ./test_perf.sh opcache > /dev/null
+    real    0m0.543s
 
 ### Why do I need it?
 You probably don't.  But if you have or ever do find yourself writing a shell script which:
@@ -129,6 +159,8 @@ When you're ready, invoke the parse function:
 ```
 shini_parse "settings.ini"
 ```
+
+(For increased performance on really large INI files, you can call `shini_parse_section` and specify the specific INI section you're interested in: `shini_parse_section "settings.ini" "SomeSection"`)
 
 Bingo.  A full (and simple example) can be found in `example.sh`.
 
