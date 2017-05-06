@@ -10,6 +10,34 @@ A small, minimialist, <s>portable</s> <em>compatible</em><sup>1</sup> `/bin/sh` 
 ### What is `shini`?
 As above.  It's a small set of functions written for inclusion in shell scripts, released under the MIT license.
 
+### Is it slow?
+Shell scripting was never designed with speed for this kind of processing in mind.  That said, on recent versions of `bash` (version 3 or newer) and `zsh` (and to a lesser extent `ksh` version 93 and newer) the performance is quite acceptable.
+
+Other/older shells will fall back to expensive calls to `grep` and `sed`, an will perform significantly slower (potentially hundreds of times slower).
+
+On an 2012 i7 MacBook, a 1900 line INI file will fully parse within 0.6s - and a single section therein in under 0.24s (`zsh`):
+
+    $ wc -l tests/php.ini 
+    1917 tests/php.ini
+
+    $ time zsh ./test_perf.sh > /dev/null
+    real    0m0.595s
+
+    $ time bash ./test_perf.sh > /dev/null
+    real    0m0.838s
+
+    $ time ksh ./test_perf.sh > /dev/null
+    real    0m2.901s
+
+    $ time zsh ./test_perf.sh opcache > /dev/null
+    real    0m0.237s
+
+    $ time bash ./test_perf.sh opcache > /dev/null
+    real    0m0.313s
+
+    $ time ksh ./test_perf.sh opcache > /dev/null
+    real    0m0.543s
+
 ### Why do I need it?
 You probably don't.  But if you have or ever do find yourself writing a shell script which:
  * Needs system or user specific settings
