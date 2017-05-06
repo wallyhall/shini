@@ -1,7 +1,9 @@
 shini [![Build Status](https://travis-ci.org/wallyhall/shini.svg?branch=master)](https://travis-ci.org/wallyhall/shini)
 =====
 
-A small, minimialist, portable `/bin/sh` routine for reading (and now very alpha-quality writing) of INI files.
+A small, minimialist, <s>portable</s> <em>compatible</em><sup>1</sup> `/bin/sh` routine for reading (and now very alpha-quality writing) of INI files.
+
+<em><sup>1</sup> This script previously attempted to be "portable", that is to say - written in a manner that it would reliably have a good chance of running anywhere with no specific implementation coded inside.  In order to gain usable performance on INI files bigger than "very small", it has since been modified to include shell specific implementation for recent versions of `zsh`, `ksh` and `bash` - considerably increasing performance at the cost of code complexity.  Therefore, I am calling it 'compatible' herein.</em>
 
 ## About
 
@@ -129,6 +131,8 @@ When you're ready, invoke the parse function:
 ```
 shini_parse "settings.ini"
 ```
+
+(For increased performance on really large INI files, you can call `shini_parse_section` and specify the specific INI section you're interested in: `shini_parse_section "settings.ini" "SomeSection"`)
 
 Bingo.  A full (and simple example) can be found in `example.sh`.
 
