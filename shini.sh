@@ -57,34 +57,49 @@ shini_regex_replace()
 # @param extra Extra argument for callbacks (optional)
 shini_parse()
 {
+    shini_parse_section "$1" '' "$2" "$3" "$4" "$5"
+}
+
+# @param inifile Filename of INI file to parse
+# @param section Section to parse (or empty string for entire file)
+# @param postfix Function postfix for callbacks (optional)
+# @param extra Extra argument for callbacks (optional)
+shini_parse_section()
+{
     shini_setup
     # ********
 
-    RX_KEY='[a-zA-Z0-9_\-]'
+    RX_KEY='[a-zA-Z0-9_\-\.]'
     RX_VALUE="[^;\"]"
     RX_SECTION='[a-zA-Z0-9_\-]'
     RX_WS='[ 	]'
     RX_QUOTE='"'
     RX_HEX='[0-9A-F]'
     POSTFIX=''
+    SKIP_TO_SECTION=''
     EXTRA1=''
     EXTRA2=''
     EXTRA3=''
+    SECTION_FOUND=-1
 	
-    if [ $# -ge 2 ] && [ ! -z "$2" ]; then
-        POSTFIX="_$2"
+	if [ $# -ge 2 ] && [ ! -z "$2" ]; then
+        SKIP_TO_SECTION="$2"
     fi
 	
-    if [ $# -ge 3 ] && ! [ -z "$3" ]; then
-        EXTRA1="$3"
+    if [ $# -ge 3 ] && [ ! -z "$3" ]; then
+        POSTFIX="_$3"
     fi
 	
-    if [ $# -ge 4 ] && [ ! -z "$4" ]; then
-        EXTRA2="$4"
+    if [ $# -ge 4 ] && ! [ -z "$4" ]; then
+        EXTRA1="$4"
     fi
 	
     if [ $# -ge 5 ] && [ ! -z "$5" ]; then
-        EXTRA3="$5"
+        EXTRA2="$5"
+    fi
+	
+    if [ $# -ge 6 ] && [ ! -z "$6" ]; then
+        EXTRA3="$6"
     fi
 	
     if ! shini_function_exists "__shini_parsed${POSTFIX}"; then
@@ -120,12 +135,23 @@ shini_parse()
             shini_regex_replace "$LINE" "^${RX_WS}*\[(${RX_SECTION}${RX_SECTION}*)\]${RX_WS}*$" "\1"
             SECTION=$shini_retval
 
+            if [ "$SKIP_TO_SECTION" != '' ]; then
+                # stop once specific section is finished
+                [ $SECTION_FOUND -eq 0 ] && break;
+                
+                # mark the specified section as found
+                [ "$SKIP_TO_SECTION" = "$SECTION" ] && SECTION_FOUND=0;
+            fi
+
             if shini_function_exists "__shini_parsed_section${POSTFIX}"; then
                 "__shini_parsed_section${POSTFIX}" "$SECTION" "$EXTRA1" "$EXTRA2" "$EXTRA3"
             fi
 			
             continue
         fi
+        
+        # Skip over sections we don't care about, if a specific section was specified
+        [ "$SKIP_TO_SECTION" != '' ] && [ $SECTION_FOUND -ne 0 ] && continue;
 		
         # Check for new values
         if shini_regex_match "$LINE" "^${RX_WS}*${RX_KEY}${RX_KEY}*${RX_WS}*="; then

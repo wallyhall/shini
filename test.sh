@@ -16,6 +16,40 @@ __shini_parse_error()
 	esac
 }
 
+__shini_parsed_specific_test1()
+{
+        ERROR=0
+        case "$1" in
+                "test1sectionA")
+                        case "$2" in
+                                "test1c")
+                                        ;;
+                                "test1d")
+                                        ;;
+                                "test1e")
+                                        ;;
+
+                                *)
+                                        ERROR=1
+                                        ;;
+                        esac
+                        ;;
+
+                *)
+                        ERROR=1
+                        ;;
+        esac
+
+        if [ "$3" != "b" ]; then
+                FAIL=1
+            fi
+
+        if [ $ERROR -eq 1 ]; then
+                echo "Parse provided wrong result on '$1' '$2' '$3'" 1>&2
+                FAIL=1
+        fi
+}
+
 __shini_parsed()
 {
 	ERROR=0
@@ -54,7 +88,7 @@ __shini_parsed()
 
 	if [ "$3" != "b" ]; then
 		FAIL=1
-	fi
+            fi
 
 	if [ $ERROR -eq 1 ]; then
 		echo "Parse provided wrong result on '$1' '$2' '$3'" 1>&2
@@ -112,6 +146,10 @@ if grep -q "abc=123" "$TEMP"; then
     echo "Updating failed (abc=123 still remains)"
     FAIL=1
 fi
+
+## Specific section test
+
+shini_parse_section "tests/test1.ini" "test1sectionA" "specific_test1"
 
 rm -f "$TEMP"
 
