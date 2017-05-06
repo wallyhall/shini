@@ -1,8 +1,27 @@
-# shini - portable INI library for sh (with extras for bash)
+# shini - compatible INI library for sh
 #
 # This code is released freely under the MIT license - see the shipped LICENSE document.
 # For the latest version etc, please see https://github.com/wallyhall/shini
 #
+
+# Solely for the purpose of portable performance, this script breaks good practice to
+# avoid forking subshells.  One such good practice is avoiding global variables.
+# This variable is used to carry non-numeric results from functions to the caller.
+# Alternatively an echo and "$(...)" approach could be used, but is significantly slower.
+
+shini_setup()
+{
+    if [ -n "$ZSH_VERSION" ]; then
+        RESTORE_OPTS=$(set +o)
+        # Enable BASH_REMATCH for zsh
+        setopt KSH_ARRAYS BASH_REMATCH
+    fi
+}
+
+shini_teardown()
+{
+    [ -n "$ZSH_VERSION" ] && eval "$RESTORE_OPTS"
+}
 
 shini_function_exists()
 {
@@ -10,11 +29,37 @@ shini_function_exists()
     return $?
 }
 
+shini_regex_match()
+{
+    # $KSH_VERSION (I'm told) only exists on ksh 93 and above, which supports regex matching.
+    if [ "${BASH_VERSINFO}" -ge 3 ] || [ -n "$ZSH_VERSION" ] || [ -n "$KSH_VERSION" ]; then
+        [[ "$1" =~ $2 ]] && return 0 || return 1
+    fi
+
+    printf '%s' "$1" | grep -qe "$2"
+    return $?
+}
+
+shini_regex_replace()
+{
+    if [ "${BASH_VERSINFO}" -ge 3 ] || [ -n "$ZSH_VERSION" ]; then
+        [[ "$1" =~ $2 ]] && shini_retval=${BASH_REMATCH[1]} || shini_retval="$1"
+        return 0
+    fi
+
+    shini_retval="$(printf '%s' "$1" | sed -E "s/$2/\1/")"  # If you have isses on older systems,
+    # it may be the non-newer POSIX compliant sed.
+    # -E should be enabling extended regex mode portably.
+}
+
 # @param inifile Filename of INI file to parse
 # @param postfix Function postfix for callbacks (optional)
 # @param extra Extra argument for callbacks (optional)
 shini_parse()
 {
+    shini_setup
+    # ********
+
     RX_KEY='[a-zA-Z0-9_\-]'
     RX_VALUE="[^;\"]"
     RX_SECTION='[a-zA-Z0-9_\-]'
@@ -71,10 +116,9 @@ shini_parse()
     SECTION=''
     while read LINE || [ -n "$LINE" ]; do  # -n $LINE catches final line if not empty
         # Check for new sections
-        if printf '%s' "$LINE" | \
-          grep -qe "^${RX_WS}*\[${RX_SECTION}${RX_SECTION}*\]${RX_WS}*$"; then
-            SECTION="$(printf '%s' "$LINE" | \
-                sed "s/^${RX_WS}*\[\(${RX_SECTION}${RX_SECTION}*\)\]${RX_WS}*$/\1/")"
+        if shini_regex_match "$LINE" "^${RX_WS}*\[${RX_SECTION}${RX_SECTION}*\]${RX_WS}*$"; then
+            shini_regex_replace "$LINE" "^${RX_WS}*\[(${RX_SECTION}${RX_SECTION}*)\]${RX_WS}*$" "\1"
+            SECTION=$shini_retval
 
             if shini_function_exists "__shini_parsed_section${POSTFIX}"; then
                 "__shini_parsed_section${POSTFIX}" "$SECTION" "$EXTRA1" "$EXTRA2" "$EXTRA3"
@@ -84,24 +128,25 @@ shini_parse()
         fi
 		
         # Check for new values
-        if printf '%s' "$LINE" | \
-          grep -qe "^${RX_WS}*${RX_KEY}${RX_KEY}*${RX_WS}*="; then
-            KEY="$(printf '%s' "$LINE" | \
-                sed "s/^${RX_WS}*\(${RX_KEY}${RX_KEY}*\)${RX_WS}*=.*$/\1/")"
-            VALUE="$(printf '%s' "$LINE" | \
-                sed "s/^${RX_WS}*${RX_KEY}${RX_KEY}*${RX_WS}*=${RX_WS}*${RX_QUOTE}\{0,1\}\(${RX_VALUE}*\)${RX_QUOTE}\{0,1\}\(${RX_WS}*\;.*\)*$/\1/")"
+        if shini_regex_match "$LINE" "^${RX_WS}*${RX_KEY}${RX_KEY}*${RX_WS}*="; then
+            shini_regex_replace "$LINE" "^${RX_WS}*(${RX_KEY}${RX_KEY}*)${RX_WS}*=.*$"
+            KEY=$shini_retval
+            
+            shini_regex_replace "$LINE" "^${RX_WS}*${RX_KEY}${RX_KEY}*${RX_WS}*=${RX_WS}*${RX_QUOTE}{0,1}(${RX_VALUE}*)${RX_QUOTE}{0,1}(${RX_WS}*\;.*)*$"
+            VALUE=$shini_retval
 			
-            if printf '%s' "$VALUE" | grep -qe "^0x${RX_HEX}${RX_HEX}*$"; then
+            if shini_regex_match "$LINE" "^0x${RX_HEX}${RX_HEX}*$"; then
                 VALUE=$(printf '%d' "$VALUE")
             fi
 			
             "__shini_parsed${POSTFIX}" "$SECTION" "$KEY" "$VALUE" "$EXTRA1" "$EXTRA2" "$EXTRA3"
 						
             if shini_function_exists "__shini_parsed_comment${POSTFIX}"; then
-                if printf '%s' "$LINE" | grep -q ";"; then
-                    COMMENT="$(printf '%s' "$LINE" | \
-                        sed "s/^.*\;\(.*\)$/\1/")"
-                     "__shini_parsed_comment${POSTFIX}" "$COMMENT" "$EXTRA1" "$EXTRA2" "$EXTRA3"
+                if shini_regex_match "$LINE" ";"; then
+                    shini_regex_replace "$LINE" "^.*\;(.*)$"
+                    COMMENT=$shini_retval
+                    
+                    "__shini_parsed_comment${POSTFIX}" "$COMMENT" "$EXTRA1" "$EXTRA2" "$EXTRA3"
                 fi
             fi
             
@@ -110,8 +155,8 @@ shini_parse()
 		
         # Announce parse errors
         if [ "$LINE" != '' ] &&
-          ! printf '%s' "$LINE" | grep -qe "^${RX_WS}*;.*$" &&
-          ! printf '%s' "$LINE" | grep -qe "^${RX_WS}*$"; then
+          shini_regex_match "$LINE" "^${RX_WS}*;.*$" &&
+          shini_regex_match "$LINE" "^${RX_WS}*$"; then
             if shini_function_exists "__shini_parse_error${POSTFIX}"; then
                 "__shini_parse_error${POSTFIX}" $LINE_NUM "$LINE" "$EXTRA1" "$EXTRA2" "$EXTRA3"
             else
@@ -122,6 +167,8 @@ shini_parse()
         LINE_NUM=$((LINE_NUM+1))
     done < "$INI_FILE"
 
+    # ********
+    shini_teardown
 }
 
 # @param inifile Filename of INI file to write to
@@ -130,6 +177,9 @@ shini_parse()
 # @param value Value to add/update, do not specify to delete
 shini_write()
 {
+    shini_setup
+    # ********
+
     # This is not yet optimised (early write support only) - 
     # We actually re-parse the entire file, looking for the location in which to
     # write the new value, writing out everything we parse as-is meanwhile.
@@ -206,4 +256,7 @@ shini_write()
     fi
     
     mv "$INI_FILE_TEMP" "$INI_FILE"
+    
+    # ********
+    shini_teardown
 }
