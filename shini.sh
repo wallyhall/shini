@@ -32,7 +32,7 @@ shini_function_exists()
 shini_regex_match()
 {
     # $KSH_VERSION (I'm told) only exists on ksh 93 and above, which supports regex matching.
-    if [ -n "$BASH_VERSINFO" ] && $[ "$BASH_VERSINFO" -ge 3 ] || \
+    if [ -n "$BASH_VERSINFO" ] && [ "$BASH_VERSINFO" -ge 3 ] || \
        [ -n "$ZSH_VERSION" ] || \
        [ -n "$KSH_VERSION" ]; then
         [[ "$1" =~ $2 ]] && return 0 || return 1
@@ -44,10 +44,11 @@ shini_regex_match()
 
 shini_regex_replace()
 {
-#    if [ "${BASH_VERSINFO}" -ge 3 ] || [ -n "$ZSH_VERSION" ]; then
-#        [[ "$1" =~ $2 ]] && shini_retval=${BASH_REMATCH[1]} || shini_retval="$1"
-#        return 0
-#    fi
+    if [ -n "$BASH_VERSINFO" ] && [ "${BASH_VERSINFO}" -ge 3 ] || \
+       [ -n "$ZSH_VERSION" ]; then
+        [[ "$1" =~ $2 ]] && shini_retval=${BASH_REMATCH[1]} || shini_retval="$1"
+        return 0
+    fi
 
     shini_retval="$(printf '%s' "$1" | sed -E "s/$2/\1/")"  # If you have isses on older systems,
     # it may be the non-newer POSIX compliant sed.
