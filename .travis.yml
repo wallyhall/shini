@@ -16,3 +16,4 @@ script:
   - bash test.sh
   - ksh test.sh
   - zsh test.sh
+  - which dash >/dev/null && dash test.sh
