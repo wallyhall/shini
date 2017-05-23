@@ -1,6 +1,5 @@
 os:
   - linux
-  - osx
 
 sudo: required
 
@@ -16,4 +15,4 @@ script:
   - bash test.sh
   - ksh test.sh
   - zsh test.sh
-  - which dash >/dev/null && dash test.sh
+  - dash test.sh
