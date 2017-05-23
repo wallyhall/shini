@@ -10,6 +10,7 @@ addons:
       - ksh
       - bash
       - zsh
+      - dash
 
 script:
   - bash test.sh

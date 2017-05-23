@@ -16,6 +16,10 @@ shini_setup()
         # Enable BASH_REMATCH for zsh
         setopt KSH_ARRAYS BASH_REMATCH
     fi
+    
+    # detect if expr supports regex matching
+    expr 'abc123' : '^abc[0-9]*' > /dev/null 2>&1
+    EXPR_REGEX=$?
 }
 
 shini_teardown()
@@ -36,6 +40,12 @@ shini_regex_match()
        [ -n "$ZSH_VERSION" ] || \
        [ -n "$KSH_VERSION" ]; then
         [[ "$1" =~ $2 ]] && return 0 || return 1
+    fi
+
+    # ash/dash, and possibly others
+    if [ "$EXPR_REGEX" -eq 0 ]; then
+        expr "$1" : "$2" > /dev/null 2>&1
+        return $?
     fi
 
     printf '%s' "$1" | grep -qe "$2"
