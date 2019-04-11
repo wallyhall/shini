@@ -150,11 +150,12 @@ shini_parse_section()
                 "__shini_parsed_section${POSTFIX}" "$SECTION" "$EXTRA1" "$EXTRA2" "$EXTRA3"
             fi
 			
-            continue
+            LINE_NUM=$((LINE_NUM+1))
+	    continue
         fi
         
         # Skip over sections we don't care about, if a specific section was specified
-        [ "$SKIP_TO_SECTION" != '' ] && [ $SECTION_FOUND -ne 0 ] && continue;
+        [ "$SKIP_TO_SECTION" != '' ] && [ $SECTION_FOUND -ne 0 ] && LINE_NUM=$((LINE_NUM+1)) && continue;
 		
         # Check for new values
         if shini_regex_match "$LINE" "^${RX_WS}*${RX_KEY}${RX_KEY}*${RX_WS}*="; then
@@ -178,14 +179,15 @@ shini_parse_section()
                     "__shini_parsed_comment${POSTFIX}" "$COMMENT" "$EXTRA1" "$EXTRA2" "$EXTRA3"
                 fi
             fi
-            
+
+            LINE_NUM=$((LINE_NUM+1))
             continue
         fi
 		
         # Announce parse errors
         if [ "$LINE" != '' ] &&
-          shini_regex_match "$LINE" "^${RX_WS}*;.*$" &&
-          shini_regex_match "$LINE" "^${RX_WS}*$"; then
+          ! shini_regex_match "$LINE" "^${RX_WS}*;.*$" &&
+          ! shini_regex_match "$LINE" "^${RX_WS}*$"; then
             if shini_function_exists "__shini_parse_error${POSTFIX}"; then
                 "__shini_parse_error${POSTFIX}" $LINE_NUM "$LINE" "$EXTRA1" "$EXTRA2" "$EXTRA3"
             else
