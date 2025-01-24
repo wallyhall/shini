@@ -261,6 +261,10 @@ shini_write()
     # shellcheck disable=SC2317
     __shini_parsed_section__writer()
     {
+        if [ -n "$LAST_SECTION" ]; then
+            printf "\n\n" >> "$INI_FILE_TEMP"
+        fi
+
         # Validate the last section wasn't the target section
         if [ "$LAST_SECTION" = "$WRITE_SECTION" ]; then
             # If it was, and the value wasn't written already, write it
@@ -269,7 +273,7 @@ shini_write()
                 VALUE_WRITTEN=1
             fi
         fi
-        printf "\n[%s]" "$1" >> "$INI_FILE_TEMP"
+        printf "[%s]" "$1" >> "$INI_FILE_TEMP"
         
         LAST_SECTION="$1"
     }
@@ -328,13 +332,15 @@ shini_write()
     if [ "$VALUE_WRITTEN" -eq 0 ]; then
         # Check if final existing section was target one, add it if not
         if [ "$LAST_SECTION" != "$WRITE_SECTION" ]; then
-            printf "\n[%s]" "$WRITE_SECTION" >> "$INI_FILE_TEMP"
+            printf "\n\n[%s]" "$WRITE_SECTION" >> "$INI_FILE_TEMP"
         fi
         # Write value at end of file
         # shellcheck disable=SC2059
         printf "$PRINTFMT" "$WRITE_KEY" "$WRITE_VALUE" >> "$INI_FILE_TEMP"
     fi
     
+    printf "\n" >> "$INI_FILE_TEMP"
+
     mv "$INI_FILE_TEMP" "$INI_FILE"
     
     # ********
