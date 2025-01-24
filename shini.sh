@@ -191,7 +191,7 @@ shini_parse_section()
             if shini_function_exists "__shini_parse_error${POSTFIX}"; then
                 "__shini_parse_error${POSTFIX}" $LINE_NUM "$LINE" "$EXTRA1" "$EXTRA2" "$EXTRA3"
             else
-                printf 'shini: Unable to parse line %d:\n  `%s`\n' $LINE_NUM "$LINE"
+                printf 'shini: Unable to parse line %d:\n  `%s`\n' $LINE_NUM "$LINE" 1>&2
             fi
         fi
 		
