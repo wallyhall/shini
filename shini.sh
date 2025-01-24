@@ -308,7 +308,7 @@ shini_write()
     fi
     
     INI_FILE="$1"
-    INI_FILE_TEMP="$(mktemp -t shini_XXXXXX)"       
+    INI_FILE_TEMP="$(mktemp -t shini_XXXXXX)"
     
     WRITE_SECTION="$2"
     WRITE_KEY="$3"
