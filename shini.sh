@@ -151,7 +151,7 @@ shini_parse_section()
             fi
 			
             LINE_NUM=$((LINE_NUM+1))
-	    continue
+	        continue
         fi
         
         # Skip over sections we don't care about, if a specific section was specified
