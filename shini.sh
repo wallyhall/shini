@@ -287,7 +287,7 @@ shini_write()
             if [ "$2" = "$WRITE_KEY" ]; then
                 if [ -n "$WRITE_VALUE" ]; then
                     # shellcheck disable=SC2059
-                    printf "$PRINTFMT y" "$WRITE_KEY" "$WRITE_VALUE" >> "$INI_FILE_TEMP"
+                    printf "$PRINTFMT" "$WRITE_KEY" "$WRITE_VALUE" >> "$INI_FILE_TEMP"
                 fi
                 VALUE_WRITTEN=1
                 return
