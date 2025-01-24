@@ -126,9 +126,10 @@ shini_parse "tests/test2.ini"
 TEMP="$(mktemp -t shini_test_XXXXXX)"
 printf "
 [SECTION1]
-abc=123
+abc=\"123\"
 [SECTION2]
-def=456 ; comment
+def=\"456\" ; comment
+quack=duck ; comment
 ccc=ccc" > "$TEMP"
 
 shini_write "$TEMP" "SECTION1" "qqq" "aaa" 
@@ -138,14 +139,25 @@ shini_write "$TEMP" "SECTION2" "rrr" "sss"
 shini_write "$TEMP" "SECTION1" "abc" "bbb" 
 shini_write "$TEMP" "SECTION3" "xxx" "yyy"
 
-if ! grep -q "qqq=ddd" "$TEMP"; then
+if ! grep -q '^qqq=ddd$' "$TEMP"; then
     echo "Writing failed (qqq=ddd)"
     FAIL=1
 fi
 
-if grep -q "abc=123" "$TEMP"; then
+if grep -q '^abc=123$' "$TEMP"; then
     echo "Updating failed (abc=123 still remains)"
     FAIL=1
+fi
+
+if ! grep -q '^quack=duck *; comment$' "$TEMP"; then
+    echo "Write corruption (quack=duck)"
+    FAIL=1
+fi
+
+if [ "$FAIL" -ne 0 ]; then
+	echo "************ Resulting INI (1) ************"
+	cat "$TEMP"
+	echo "************        EOF        ************"
 fi
 
 # Quoted write tests
@@ -153,19 +165,30 @@ fi
 shini_write "$TEMP" "SECTION3" "rrr" " s s s " true
 shini_write "$TEMP" "SECTION1" "qqq" "ddd" true
 
-if ! grep -q "rrr=\" s s s \"" "$TEMP"; then
+if ! grep -q '^rrr=" s s s "$' "$TEMP"; then
     echo "Quoted writing failed (rrr=\" s s s \")"
     FAIL=1
 fi
 
-if ! grep -q "qqq=\"ddd\"" "$TEMP"; then
+if ! grep -q '^qqq="ddd"$' "$TEMP"; then
     echo "Quoted updating failed (qqq=\"ddd\")"
     FAIL=1
 fi
 
-if grep -q "abc=\"123\"" "$TEMP"; then
+if ! grep -q '^quack="duck"; comment$' "$TEMP"; then
+    echo "Quoted write corruption (quack=\"duck\"; comment)"
+    FAIL=1
+fi
+
+if grep -q '^abc="123"$' "$TEMP"; then
     echo "Quoted write corruption (abc=\"123\" is broken)"
     FAIL=1
+fi
+
+if [ "$FAIL" -ne 0 ]; then
+	echo "************ Resulting INI (2) ************"
+	cat "$TEMP"
+	echo "************        EOF        ************"
 fi
 
 ## Specific section test

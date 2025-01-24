@@ -45,7 +45,7 @@ shini_regex_match()
     return $?
 }
 
-shini_regex_replace()
+shini_regex_extract()
 {
     # shellcheck disable=SC3054
     if [ -n "${BASH_VERSINFO[0]}" ] && [ "${BASH_VERSINFO[0]}" -ge 3 ] || \
@@ -53,11 +53,11 @@ shini_regex_replace()
         # shellcheck disable=SC3010
         # shellcheck disable=SC3028
         # shellcheck disable=SC3054
-        [[ "$1" =~ $2 ]] && shini_retval=${BASH_REMATCH[1]} || shini_retval="$1"
+        [[ "$1" =~ $2 ]] && printf "%s" "${BASH_REMATCH[1]}" || printf "%s" "$1"
         return 0
     fi
 
-    shini_retval="$(printf '%s' "$1" | sed -E "s/$2/\1/")"  # If you have isses on older systems,
+    printf '%s' "$1" | sed -E "s/$2/\1/"  # If you have isses on older systems,
     # it may be the non-newer POSIX compliant sed.
     # -E should be enabling extended regex mode portably.
 }
@@ -80,7 +80,6 @@ shini_parse_section()
     # ********
 
     RX_KEY='[a-zA-Z0-9_\-\.]'
-    RX_VALUE="[^;\"]"
     RX_SECTION='[a-zA-Z0-9_\-]'
     RX_WS='[ 	]'
     RX_QUOTE='"'
@@ -140,10 +139,11 @@ shini_parse_section()
     LINE_NUM=0
     SECTION=''
     while read -r LINE || [ -n "$LINE" ]; do  # -n $LINE catches final line if not empty
+        [ -z "$LINE" ] && continue
+
         # Check for new sections
         if shini_regex_match "$LINE" "^${RX_WS}*\[${RX_SECTION}${RX_SECTION}*\]${RX_WS}*$"; then
-            shini_regex_replace "$LINE" "^${RX_WS}*\[(${RX_SECTION}${RX_SECTION}*)\]${RX_WS}*$" "\1"
-            SECTION=$shini_retval
+            SECTION="$(shini_regex_extract "$LINE" "^${RX_WS}*\[(${RX_SECTION}${RX_SECTION}*)\]${RX_WS}*$" "\1")"
 
             if [ "$SKIP_TO_SECTION" != '' ]; then
                 # stop once specific section is finished
@@ -164,21 +164,53 @@ shini_parse_section()
         # Skip over sections we don't care about, if a specific section was specified
         [ "$SKIP_TO_SECTION" != '' ] && [ "$SECTION_FOUND" -ne 0 ] && LINE_NUM=$((LINE_NUM+1)) && continue;
 		
-        # Check for new values
-        if shini_regex_match "$LINE" "^${RX_WS}*${RX_KEY}${RX_KEY}*${RX_WS}*="; then
-            shini_regex_replace "$LINE" "^${RX_WS}*(${RX_KEY}${RX_KEY}*)${RX_WS}*=.*$"
-            KEY=$shini_retval
-            
-            shini_regex_replace "$LINE" "^${RX_WS}*${RX_KEY}${RX_KEY}*${RX_WS}*=${RX_WS}*${RX_QUOTE}{0,1}(${RX_VALUE}*)${RX_QUOTE}{0,1}(${RX_WS}*\;.*)*$"
-            VALUE=$shini_retval
-			
+        # Check for key/value lines
+        if shini_regex_match "$LINE" "^${RX_WS}*(${RX_KEY}${RX_KEY}*)${RX_WS}*=${RX_WS}*((${RX_QUOTE}[^${RX_QUOTE}]*${RX_QUOTE})|([^${RX_QUOTE};]*))${RX_WS}*(;(.*))*$"; then
+            # For shells supporting capturing regex ... extract the groups
+            # shellcheck disable=SC3054
+            if [ -n "${BASH_VERSINFO[0]}" ] && [ "${BASH_VERSINFO[0]}" -ge 3 ] || \
+               [ -n "$ZSH_VERSION" ]; then
+                # shellcheck disable=SC3028
+                # shellcheck disable=SC3010
+                {
+                KEY="${BASH_REMATCH[1]}"
+                COMMENT="${BASH_REMATCH[5]}"
+                TMPVAL="${BASH_REMATCH[2]}"
+                }
+
+                # Trim quotes or whitespace as applicable
+                TMPVAL="${TMPVAL%"${TMPVAL##*[![:space:]]}"}" # trim trailing whitespace
+                TMPVAL="${TMPVAL#\"}" # strip leading quote
+                TMPVAL="${TMPVAL%\"}" # strip trailing quote
+                VALUE="$TMPVAL"
+            else
+                # Fallback-mode, using string manipulation to extract
+                TMPKEY="${LINE%%=*}" # strip everything after key
+                TMPKEY="${TMPKEY#"${TMPKEY%%[![:space:]]*}"}" # trim leading whitespace
+                KEY="${TMPKEY%"${TMPKEY##*[![:space:]]}"}" # trim trailing whitespace
+
+                # Extract the value and (possible) comment
+                VALCOM="${LINE#*=}" # strip evrything before the value
+                VALCOM="${VALCOM#"${VALCOM%%[![:space:]]*}"}" # trim leading whitespace
+
+                # Determine if the value portion is quoted or not (POSIX-ly)
+                if [ "${VALCOM#\"}" != "$VALCOM" ]; then
+                    TMPVAL="${VALCOM#\"}" # strip first quote
+                    VALUE="${TMPVAL%%\"*}" # strip everything after and including the second (remaining) quote
+                    TMPCOM="${VALCOM#"\"${VALUE}\""}" # strip the quoted value out
+                    COMMENT="${TMPCOM#*\;}" # strip everything upto (and including) earliest comment marker
+                else
+                    TMPVAL="${VALCOM%%\;*}" # strip everything after (and including) earliest comment marker
+                    VALUE="${TMPVAL%"${TMPVAL##*[![:space:]]}"}" # trim trailing whitespace
+                    COMMENT="${VALCOM#*\;}" # strip everything upto (and including) earliest comment marker
+                fi
+            fi
+
             "__shini_parsed${POSTFIX}" "$SECTION" "$KEY" "$VALUE" "$EXTRA1" "$EXTRA2" "$EXTRA3"
-						
+			
             if shini_function_exists "__shini_parsed_comment${POSTFIX}"; then
                 if shini_regex_match "$LINE" ";"; then
-                    shini_regex_replace "$LINE" "^.*\;(.*)$"
-                    COMMENT=$shini_retval
-                    
+                    COMMENT="$(shini_regex_extract "$LINE" "^.*\;(.*)$")"
                     "__shini_parsed_comment${POSTFIX}" "$COMMENT" "$EXTRA1" "$EXTRA2" "$EXTRA3"
                 fi
             fi
@@ -188,9 +220,8 @@ shini_parse_section()
         fi
 		
         # Announce parse errors
-        if [ "$LINE" != '' ] &&
-          ! shini_regex_match "$LINE" "^${RX_WS}*;.*$" &&
-          ! shini_regex_match "$LINE" "^${RX_WS}*$"; then
+        if ! shini_regex_match "$LINE" "^${RX_WS}*;.*$" &&
+           ! shini_regex_match "$LINE" "^${RX_WS}*$"; then
             if shini_function_exists "__shini_parse_error${POSTFIX}"; then
                 "__shini_parse_error${POSTFIX}" $LINE_NUM "$LINE" "$EXTRA1" "$EXTRA2" "$EXTRA3"
             else
