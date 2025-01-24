@@ -84,7 +84,6 @@ shini_parse_section()
     RX_SECTION='[a-zA-Z0-9_\-]'
     RX_WS='[ 	]'
     RX_QUOTE='"'
-    RX_HEX='[0-9A-F]'
     POSTFIX=''
     SKIP_TO_SECTION=''
     EXTRA1=''
@@ -172,10 +171,6 @@ shini_parse_section()
             
             shini_regex_replace "$LINE" "^${RX_WS}*${RX_KEY}${RX_KEY}*${RX_WS}*=${RX_WS}*${RX_QUOTE}{0,1}(${RX_VALUE}*)${RX_QUOTE}{0,1}(${RX_WS}*\;.*)*$"
             VALUE=$shini_retval
-			
-            if shini_regex_match "$LINE" "^0x${RX_HEX}${RX_HEX}*$"; then
-                VALUE=$(printf '%d' "$VALUE")
-            fi
 			
             "__shini_parsed${POSTFIX}" "$SECTION" "$KEY" "$VALUE" "$EXTRA1" "$EXTRA2" "$EXTRA3"
 						
