@@ -1,6 +1,7 @@
 #!/bin/sh
 set -e
 
+# shellcheck disable=SC1091
 . "$(dirname "$0")/shini.sh"
 
 __shini_parsed ()
@@ -16,4 +17,4 @@ __shini_parse_error ()
 SECTION=''
 [ -n "$1" ] && SECTION=$1
 
-shini_parse_section "tests/php.ini" $SECTION
+shini_parse_section "tests/php.ini" "$SECTION"
