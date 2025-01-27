@@ -68,6 +68,8 @@ shini_regex_extract()
 shini_parse()
 {
     shini_parse_section "$1" '' "$2" "$3" "$4" "$5"
+
+    return 0
 }
 
 # @param inifile Filename of INI file to parse
@@ -154,7 +156,7 @@ shini_parse_section()
             fi
 
             if shini_function_exists "__shini_parsed_section${POSTFIX}"; then
-                "__shini_parsed_section${POSTFIX}" "$SECTION" "$EXTRA1" "$EXTRA2" "$EXTRA3"
+                "__shini_parsed_section${POSTFIX}" "$SECTION" "$EXTRA1" "$EXTRA2" "$EXTRA3" || break
             fi
 			
             LINE_NUM=$((LINE_NUM+1))
@@ -206,12 +208,12 @@ shini_parse_section()
                 fi
             fi
 
-            "__shini_parsed${POSTFIX}" "$SECTION" "$KEY" "$VALUE" "$EXTRA1" "$EXTRA2" "$EXTRA3"
+            "__shini_parsed${POSTFIX}" "$SECTION" "$KEY" "$VALUE" "$EXTRA1" "$EXTRA2" "$EXTRA3" || break
 			
             if shini_function_exists "__shini_parsed_comment${POSTFIX}"; then
                 if shini_regex_match "$LINE" ";"; then
                     COMMENT="$(shini_regex_extract "$LINE" "^.*\;(.*)$")"
-                    "__shini_parsed_comment${POSTFIX}" "$COMMENT" "$EXTRA1" "$EXTRA2" "$EXTRA3"
+                    "__shini_parsed_comment${POSTFIX}" "$COMMENT" "$EXTRA1" "$EXTRA2" "$EXTRA3" || break
                 fi
             fi
 
@@ -223,7 +225,7 @@ shini_parse_section()
         if ! shini_regex_match "$LINE" "^${RX_WS}*;.*$" &&
            ! shini_regex_match "$LINE" "^${RX_WS}*$"; then
             if shini_function_exists "__shini_parse_error${POSTFIX}"; then
-                "__shini_parse_error${POSTFIX}" $LINE_NUM "$LINE" "$EXTRA1" "$EXTRA2" "$EXTRA3"
+                "__shini_parse_error${POSTFIX}" $LINE_NUM "$LINE" "$EXTRA1" "$EXTRA2" "$EXTRA3" || break
             else
                 # shellcheck disable=SC2016
                 printf 'shini: Unable to parse line %d:\n  `%s`\n' $LINE_NUM "$LINE" 1>&2
@@ -327,7 +329,7 @@ shini_write()
         PRINTFMT='\n%s=%s'
     fi
     
-    shini_parse "$1" "_writer" "$2" "$3" "$4"
+    shini_parse "$INI_FILE" "_writer" "$WRITE_SECTION" "$WRITE_KEY" "$WRITE_VALUE"
     # Still not written out yet
     if [ "$VALUE_WRITTEN" -eq 0 ]; then
         # Check if final existing section was target one, add it if not
@@ -345,4 +347,46 @@ shini_write()
     
     # ********
     shini_teardown
+
+    return 0
+}
+
+# @param inifile Filename of INI file to read from
+# @param section Section of INI file to read from (blank string if sectionless INI)
+# @param key to read
+shini_read()
+{
+    shini_setup
+    # ********
+
+    # shellcheck disable=SC2317
+    __shini_parsed__key_read()
+    {
+        if [ "$1" = "$READ_SECTION" ]; then
+            if [ "$2" = "$READ_KEY" ]; then
+                printf "%s" "$3"
+                FOUND=1
+                return 1  # exit condition for shini_parse
+            fi
+        fi
+    }
+    
+    INI_FILE="$1"
+    INI_FILE_TEMP="$(mktemp -t shini_XXXXXX)"
+    
+    READ_SECTION="$2"
+    READ_KEY="$3"
+
+    FOUND=0
+
+    shini_parse "$INI_FILE" "_key_read" "$READ_SECTION" "$READ_KEY"
+
+    # ********
+    shini_teardown
+
+    if [ $FOUND -eq 0 ]; then
+        return 1
+    else
+        return 0
+    fi
 }

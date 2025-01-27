@@ -92,8 +92,9 @@ __shini_parsed()
 	esac
 
 	if [ "$3" != "b" ]; then
+		echo "Parse returned wrong value during basic test '$3' instead of 'b'" 1>&2
 		FAIL=1
-            fi
+	fi
 
 	if [ "$ERROR" -eq 1 ]; then
 		echo "Parse provided wrong result on '$1' '$2' '$3'" 1>&2
@@ -117,11 +118,13 @@ __shini_file_unreadable()
 
 FAIL=0
 
-shini_parse "tests/nonexistent.ini"
+shini_parse "tests/nonexistent.ini" || true
 shini_parse "tests/test1.ini"
 shini_parse "tests/test2.ini"
 
 ## Write tests
+
+FAIL=0
 
 TEMP="$(mktemp -t shini_test_XXXXXX)"
 printf "
@@ -194,6 +197,13 @@ fi
 ## Specific section test
 
 shini_parse_section "tests/test1.ini" "test1sectionA" "specific_test1"
+
+## Specific key test
+
+VALUE="$(shini_read tests/test2.ini "" test1b)"
+if [ "$VALUE" != "b" ]; then
+	echo "Read of specific key failed: '$VALUE' instead of 'b'" 1>&2
+fi
 
 rm -f "$TEMP"
 
