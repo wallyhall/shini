@@ -5,6 +5,32 @@ A small, minimialist, <s>portable</s> <em>compatible</em><sup>1</sup> `/bin/sh` 
 
 <em><sup>1</sup> This script previously attempted to be "portable", that is to say - written in a manner that it would reliably have a good chance of running anywhere with no specific implementation coded inside.  In order to gain usable performance on INI files bigger than "very small", it has since been modified to include shell specific implementation for recent versions of `zsh`, `ksh` and `bash` - considerably increasing performance at the cost of code complexity.  Therefore, I am calling it 'compatible' herein.</em>
 
+## TL;DR
+
+Given `demo.ini` of:
+
+```
+[INI_SECTION]
+key_name="hello world"
+```
+
+Then:
+
+```
+. shini.sh
+
+# Read a key/value pair
+VALUE="$(shini_read "demo.ini" "INI_SECTION" "key_name")"
+echo "$VALUE"   # returns "hello world"
+
+# Write a key/value pair
+shini_write "demo.ini" "INI_SECTION" "key_name" "new value"
+cat "demo.ini"  # [INI_SECTION]
+                # key_name="new value"
+```
+
+Custom parsing of INI files is available, and is more efficient if reading large files or multiple key/value pairs.
+
 ## About
 
 ### What is `shini`?
@@ -141,7 +167,19 @@ Inclusion of `shini` in your own project is easy.  You can put the content of `s
 ... etc
 ```
 
-`shini` works by parsing INI files line by line - skipping comments and invoking callback functions on errors and parsed values.
+### The simplest case
+If you want to read one or two specific key-values from a small INI file, you can use the `shini_read` helper function.  (Reading multiple keys with this is inefficient - it's a helper function for certain, and probably common, "simple scenarios".):
+
+```
+VALUE="$(shini_read "input.ini" "INI_SECTION" "key_name")"
+```
+
+`"INI_SECTION"` may be supplied as an empty string (`""`), where keys exist outside of a section.
+
+### Non-trivial usage
+If you want to read multiple key-values, parse larger INI files, or customise your handling of errors/comments/keys/etc - continue reading.
+
+`shini` works by parsing INI files line by line - skipping comments and invoking callback functions on errors and parsed values.  Beware, only `shini_read` and `shini_write` are invoked as subshells.  Using the following guidance may result in your existing variables being overwritten by `shini`.
 
 If you don't care about handling parse errors (`shini` will do this for you by default) then you only need define one callback function:
 
@@ -204,17 +242,5 @@ There are no INI format standards - so yes it does and no it doesn't?
 Due to portability constraints - some of the useful regex power isn't available to `shini`.
 
 This caused some trade-offs - with a lack of efficient control over lazy vs greedy repeats and optional groups etc, comments can only follow key/pair values and empty lines (not sections) - and where it follows values, any whitespace between the value and semi-colon is included as the value.  Explicitly use of double-quotes around the value gets around this issue.
-
-Additionally if your key/value declaration looks like this:
-
-```
-key="value" "more text" ; comment
-```
-
-... the value reads literally:
-
-```
-"value" "more text" ; comment
-```
 
 Otherwise, all known "obviously invalid" INI content gets picked up and reported.
