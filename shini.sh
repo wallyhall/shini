@@ -375,7 +375,6 @@ shini_read()
     }
     
     INI_FILE="$1"
-    INI_FILE_TEMP="$(mktemp -t shini_XXXXXX)"
     
     READ_SECTION="$2"
     READ_KEY="$3"
