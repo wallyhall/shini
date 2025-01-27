@@ -68,8 +68,7 @@ shini_regex_extract()
 shini_parse()
 {
     shini_parse_section "$1" '' "$2" "$3" "$4" "$5"
-
-    return 0
+    return $?
 }
 
 # @param inifile Filename of INI file to parse
@@ -114,7 +113,7 @@ shini_parse_section()
 	
     if ! shini_function_exists "__shini_parsed${POSTFIX}"; then
         printf 'shini: __shini_parsed%s function not declared.\n' "${POSTFIX}" 1>&2
-        exit 255
+        return 255
     fi
 
     if [ $# -lt 1 ]; then
@@ -122,7 +121,7 @@ shini_parse_section()
             "__shini_no_file_passed${POSTFIX}" "$EXTRA1" "$EXTRA2" "$EXTRA3"
         else
             printf 'shini: Argument 1 needs to specify the INI file to parse.\n' 1>&2
-            exit 254
+            return 254
         fi
     fi
     INI_FILE="$1"
@@ -133,7 +132,7 @@ shini_parse_section()
         else
             # shellcheck disable=SC2016
             printf 'shini: Unable to read INI file:\n  `%s`\n' "$INI_FILE" 1>&2
-            exit 253
+            return 253
         fi
     fi
 
@@ -237,6 +236,8 @@ shini_parse_section()
 
     # ********
     shini_teardown
+
+    return 0
 }
 
 # SUBSHELL FUNCTION
@@ -310,7 +311,7 @@ shini_write()
             __shini_no_file_passed
         else
             printf 'shini: Argument 1 needs to specify the INI file to write.\n' 1>&2
-            exit 254
+            return 254
         fi
     fi
     
