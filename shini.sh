@@ -137,9 +137,10 @@ shini_parse_section()
     fi
 
     # Iterate INI file line by line
-    LINE_NUM=0
+    LINE_NUM=-1
     SECTION=''
     while read -r LINE || [ -n "$LINE" ]; do  # -n $LINE catches final line if not empty
+        LINE_NUM=$((LINE_NUM+1))
         [ -z "$LINE" ] && continue
 
         # Check for new sections
@@ -158,7 +159,6 @@ shini_parse_section()
                 "__shini_parsed_section${POSTFIX}" "$SECTION" "$EXTRA1" "$EXTRA2" "$EXTRA3" || break
             fi
 			
-            LINE_NUM=$((LINE_NUM+1))
 	        continue
         fi
         
@@ -216,7 +216,16 @@ shini_parse_section()
                 fi
             fi
 
-            LINE_NUM=$((LINE_NUM+1))
+            continue
+        fi
+
+        # Check for comment lines
+        if shini_regex_match "$LINE" "^${RX_WS}*\;"; then
+            if shini_function_exists "__shini_parsed_comment_line${POSTFIX}"; then
+                COMMENT="${LINE#*\;}" # strip everything upto (and including) earliest comment marker
+                "__shini_parsed_comment_line${POSTFIX}" "$COMMENT" "$EXTRA1" "$EXTRA2" "$EXTRA3" || break
+            fi
+
             continue
         fi
 		
@@ -230,8 +239,6 @@ shini_parse_section()
                 printf 'shini: Unable to parse line %d:\n  `%s`\n' $LINE_NUM "$LINE" 1>&2
             fi
         fi
-		
-        LINE_NUM=$((LINE_NUM+1))
     done < "$INI_FILE"
 
     # ********
@@ -265,19 +272,17 @@ shini_write()
     # shellcheck disable=SC2317
     __shini_parsed_section__writer()
     {
-        if [ -n "$LAST_SECTION" ]; then
-            printf "\n\n" >> "$INI_FILE_TEMP"
-        fi
-
         # Validate the last section wasn't the target section
         if [ "$LAST_SECTION" = "$WRITE_SECTION" ]; then
             # If it was, and the value wasn't written already, write it
             if [ "$VALUE_WRITTEN" -eq 0 ]; then
-                printf "\n%s=%s" "$WRITE_KEY" "$WRITE_VALUE" >> "$INI_FILE_TEMP"
+                # shellcheck disable=SC2059
+                printf "$PRINTFMT" "$WRITE_KEY" "$WRITE_VALUE" >> "$INI_FILE_TEMP"
                 VALUE_WRITTEN=1
             fi
         fi
-        printf "[%s]" "$1" >> "$INI_FILE_TEMP"
+
+        printf "\n[%s]" "$1" >> "$INI_FILE_TEMP"
         
         LAST_SECTION="$1"
     }
@@ -285,7 +290,13 @@ shini_write()
     # shellcheck disable=SC2317
     __shini_parsed_comment__writer()
     {
-        printf ";%s" "$1" >> "$INI_FILE_TEMP"
+        printf " ;%s" "$1" >> "$INI_FILE_TEMP"
+    }
+
+    # shellcheck disable=SC2317
+    __shini_parsed_comment_line__writer()
+    {
+        printf "\n;%s" "$1" >> "$INI_FILE_TEMP"
     }
     
     # shellcheck disable=SC2317
@@ -336,16 +347,15 @@ shini_write()
     if [ "$VALUE_WRITTEN" -eq 0 ]; then
         # Check if final existing section was target one, add it if not
         if [ "$LAST_SECTION" != "$WRITE_SECTION" ]; then
-            printf "\n\n[%s]" "$WRITE_SECTION" >> "$INI_FILE_TEMP"
+            printf "\n[%s]" "$WRITE_SECTION" >> "$INI_FILE_TEMP"
         fi
         # Write value at end of file
         # shellcheck disable=SC2059
         printf "$PRINTFMT" "$WRITE_KEY" "$WRITE_VALUE" >> "$INI_FILE_TEMP"
     fi
-    
-    printf "\n" >> "$INI_FILE_TEMP"
 
-    mv "$INI_FILE_TEMP" "$INI_FILE"
+    tail -n +2 "$INI_FILE_TEMP" > "$INI_FILE"
+    rm -f "$INI_FILE_TEMP"
     
     # ********
     shini_teardown
