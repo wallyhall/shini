@@ -239,13 +239,14 @@ shini_parse_section()
     shini_teardown
 }
 
+# SUBSHELL FUNCTION
 # @param inifile Filename of INI file to write to
 # @param section Section of INI file to write to
 # @param variable Variable name to add/update/delete
 # @param value Value to add/update, do not specify to delete
 # @param quote (Double-)quote the value being written (default: false)
 shini_write()
-{
+(
     shini_setup
     # ********
 
@@ -349,13 +350,14 @@ shini_write()
     shini_teardown
 
     return 0
-}
+)
 
+# SUBSHELL FUNCTION
 # @param inifile Filename of INI file to read from
 # @param section Section of INI file to read from (blank string if sectionless INI)
 # @param key to read
 shini_read()
-{
+(
     shini_setup
     # ********
 
@@ -389,4 +391,4 @@ shini_read()
     else
         return 0
     fi
-}
+)
